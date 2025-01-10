@@ -1,4 +1,4 @@
-Here's a simple README file for `set_hostname.bat` script:
+Here's a simple README file for `generate_hostname.bat` script:
 
 ```markdown
 # Set Hostname Script
@@ -88,7 +88,9 @@ Hostname changed to: LAPTOP-A1B2C3D
 
 ---
 ```
+
 ```markdown
+Here's a simple README file for `serial_hostname.bat` script:
 # Change Hostname Script
 
 This repository contains a batch script that changes the hostname of your computer to its serial number.
@@ -115,7 +117,6 @@ The script performs the following actions:
 
 Here is the content of the script:
 
-```batch
 @echo off
 :: Check for elevated permissions
 net session >nul 2>&1
