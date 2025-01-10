@@ -14,7 +14,6 @@ The hostname is composed of a fixed prefix `LAPTOP-` followed by seven random ch
 3. Navigate to the directory where `generate_hostname.bat` is located.
 4. Execute the script by typing:
   .\generate_hostname.bat
-
 5. The script will generate a new random hostname and set it for the system. It will also display the new hostname in the command prompt.
 
 ## Script Details
