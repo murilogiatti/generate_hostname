@@ -28,11 +28,12 @@ for /L %%i in (1,1,7) do (
       echo Error: Invalid character index %%C
       exit /b 1
     )
+    echo Index: %%C, Char: !char!
     set "hostname=!hostname!!char!"
   )
 )
-echo !hostname!
 set "new_hostname=!hostname!"
+echo New hostname generated: !new_hostname!
 
 :: Setting the hostname
 wmic computersystem where name="%computername%" call rename name="%new_hostname%" >nul 2>&1
@@ -41,8 +42,6 @@ if %errorlevel% NEQ 0 (
     exit /b 1
 )
 echo Hostname changed to: %new_hostname%
-pause
-exit /b
 
 :: Ask the user if they want to restart now or later
 set /p RestartNow=Do you want to restart the computer now? (Y/N): 
