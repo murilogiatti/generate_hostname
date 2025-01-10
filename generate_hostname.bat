@@ -9,7 +9,7 @@ if "%errorlevel%" NEQ "0" (
     exit /b
 )
 
-:: Generates a random LAPTOP-XXXXXXX hostname in line with Windows 7, Windows 10
+:: Generates a random LAPTOP-XXXXXXX hostname in line with Windows.
 :: The returned hostname is not terminated by a newline so it can be used for variables.
 ::
 ::   see: https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-vista/cc749460(v=ws.10)
@@ -47,3 +47,7 @@ exit /b
 :: Example usage
 call :random_windows_hostname
 pause
+
+:: Prevent the script from closing automatically
+echo Press any key to exit...
+pause >nul
