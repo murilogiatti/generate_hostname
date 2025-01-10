@@ -1,17 +1,17 @@
-Here's a simple README file for `generate_hostname.bat` script:
+Here's a simple README file for `random_hostname.bat` script:
 
 ```markdown
 # Set Hostname Script
 
-This script generates a random hostname in the format `LAPTOP-XXXXXXX` and sets it as the new hostname for the system.
+This script generates a random hostname in the format `LAPTOP/DESKTOP-XXXXXXX` and sets it as the new hostname for the system.
 
-The hostname is composed of a fixed prefix `LAPTOP-` followed by seven random characters (uppercase letters and digits).
+The hostname is composed of a fixed prefix `LAPTOP/DESKTOP-` followed by seven random characters (uppercase letters and digits).
 
 ## Usage
 
-1. Download the `generate_hostname.bat` file.
+1. Download the `random_hostname.bat` file.
 2. Open a PowerShell or Terminal with administrative privileges.
-3. Navigate to the directory where `generate_hostname.bat` is located.
+3. Navigate to the directory where `random_hostname.bat` is located.
 4. Execute the script by typing:
   .\generate_hostname.bat
 5. The script will generate a new random hostname and set it for the system. It will also display the new hostname in the command prompt.
@@ -20,7 +20,7 @@ The hostname is composed of a fixed prefix `LAPTOP-` followed by seven random ch
 
 The script consists of the following parts:
 
-- Generates a random hostname in the format `LAPTOP-XXXXXXX`.
+- Generates a random hostname in the format `LAPTOP/DESKTOP-XXXXXXX`.
 - Uses the `wmic` command to set the new hostname.
 - The charset used for random generation includes uppercase letters (A-Z) and digits (0-9).
 
@@ -35,6 +35,14 @@ if "%errorlevel%" NEQ "0" (
     powershell -command "Start-Process '%0' -Verb runAs"
     exit /b
 )
+
+:: Generates a random LAPTOP-XXXXXXX hostname in line with Windows.
+:: The returned hostname is not terminated by a newline so it can be used for variables.
+::
+::   see: https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-vista/cc749460(v=ws.10)
+::
+:: usage: random_windows_hostname
+::   out: LAPTOP-V1XZZQ3
 
 :random_windows_hostname
 set "charset=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -63,13 +71,14 @@ echo Hostname changed to: %new_hostname%
 pause
 exit /b
 
-:: Example usage
-call :random_windows_hostname
-pause
-
-:: Prevent the script from closing automatically
-echo Press any key to exit...
-pause >nul
+:: Ask the user if they want to restart now or later
+set /p RestartNow=Do you want to restart the computer now? (Y/N): 
+if /i "%RestartNow%"=="Y" (
+    shutdown /r /t 0
+) else (
+    echo Please restart the computer later to apply the change.
+    pause
+)
 
 ## Note
 
