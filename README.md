@@ -88,3 +88,82 @@ Hostname changed to: LAPTOP-A1B2C3D
 
 ---
 ```
+```markdown
+# Change Hostname Script
+
+This repository contains a batch script that changes the hostname of your computer to its serial number.
+
+## Requirements
+
+- Windows operating system
+- Administrative privileges
+
+## Usage
+
+1. Download the script.
+2. Right-click the script and select "Run as administrator."
+3. Follow the on-screen prompts to complete the process.
+
+## Script Details
+
+The script performs the following actions:
+
+1. Checks for elevated permissions (administrative privileges).
+2. Retrieves the system's serial number using `wmic bios get serialnumber`.
+3. Sets the hostname to the retrieved serial number.
+4. Asks the user whether they want to restart the computer immediately or later.
+
+Here is the content of the script:
+
+```batch
+@echo off
+:: Check for elevated permissions
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo Requesting administrative privileges...
+    powershell -command "Start-Process '%0' -Verb runAs"
+    exit /b
+)
+
+:: Get the system serial number
+for /f "tokens=2 delims==" %%i in ('wmic bios get serialnumber /value 2^>nul') do (
+    if not "%%i"=="" (
+        set "SerialNumber=%%i"
+        goto :SerialFound
+    )
+)
+
+:SerialFound
+if "%SerialNumber%"=="" (
+    echo Failed to retrieve the serial number. Exiting script.
+    pause
+    exit /b
+)
+
+:: Remove extra spaces
+set "SerialNumber=%SerialNumber: =%"
+
+:: Set the hostname
+wmic computersystem where name="%computername%" call rename name="%SerialNumber%" >nul 2>&1
+if %errorLevel% neq 0 (
+    echo Failed to change the hostname. Exiting script.
+    pause
+    exit /b
+)
+
+:: Notify the user about the change
+echo The hostname has been changed to %SerialNumber%.
+
+:: Ask the user if they want to restart now or later
+set /p RestartNow=Do you want to restart the computer now? (Y/N):
+if /i "%RestartNow%"=="Y" (
+    shutdown /r /t 0
+) else (
+    echo Please restart the computer later to apply the change.
+    pause
+)
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+```
