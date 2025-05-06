@@ -8,16 +8,13 @@ if %errorLevel% neq 0 (
     exit /b
 )
 
-:: Get the system serial number
+:: Get the system serial number using PowerShell
 echo Retrieving the system serial number...
-for /f "tokens=2 delims==" %%i in ('wmic bios get serialnumber /value 2^>nul') do (
-    if not "%%i"=="" (
-        set "SerialNumber=%%i"
-        goto :SerialFound
-    )
+for /f %%i in ('powershell -command "Get-CimInstance -ClassName Win32_BIOS | Select-Object -ExpandProperty SerialNumber"') do (
+    set "SerialNumber=%%i"
 )
 
-:SerialFound
+:: Verify if the serial number was retrieved
 if "%SerialNumber%"=="" (
     echo Failed to retrieve the serial number. Exiting script.
     pause
@@ -28,17 +25,17 @@ if "%SerialNumber%"=="" (
 echo Cleaning up the serial number...
 set "SerialNumber=%SerialNumber: =%"
 
-:: Set the hostname
-echo Changing the hostname to %SerialNumber%...
-wmic computersystem where name="%computername%" call rename name="%SerialNumber%" >nul 2>&1
+:: Change the computer name using PowerShell
+echo Changing the computer name to %SerialNumber%...
+powershell -command "Rename-Computer -NewName '%SerialNumber%' -Force"
 if %errorLevel% neq 0 (
-    echo Failed to change the hostname. Exiting script.
+    echo Failed to change the computer name. Exiting script.
     pause
     exit /b
 )
 
 :: Notify the user about the change
-echo The hostname has been successfully changed to %SerialNumber%.
+echo The computer name has been successfully changed to %SerialNumber%.
 
 :: Ask the user if they want to restart now or later
 set /p RestartNow=Do you want to restart the computer now? (Y/N): 
