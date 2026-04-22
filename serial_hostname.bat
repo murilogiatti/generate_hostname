@@ -38,8 +38,9 @@ if %errorLevel% neq 0 (
 echo The computer name has been successfully changed to %SerialNumber%.
 
 :: Ask the user if they want to restart now or later
-set /p RestartNow=Do you want to restart the computer now? (Y/N): 
-if /i "%RestartNow%"=="Y" (
+echo.
+choice /m "Do you want to restart the computer now"
+if %errorlevel%==1 (
     echo Restarting the computer now...
     shutdown /r /t 0
 ) else (
