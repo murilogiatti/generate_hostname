@@ -1,18 +1,22 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Set prefix from argument or default to DESKTOP
+set "prefix=%~1"
+if "%prefix%"=="" set "prefix=DESKTOP"
+
 :: Check for elevated permissions
 echo Checking for elevated permissions...
 net session >nul 2>&1
 if %errorlevel% NEQ 0 (
     echo Requesting administrative privileges...
-    powershell -command "Start-Process '%0' -Verb runAs"
+    powershell -command "Start-Process '%~f0' -ArgumentList '%prefix%' -Verb runAs"
     exit /b
 )
 
-:: Generate a random DESKTOP-XXXXXXX hostname
+:: Generate a random %prefix%-XXXXXXX hostname
 set "charset=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-set "hostname=DESKTOP-"
+set "hostname=%prefix%-"
 for /L %%i in (1,1,7) do (
     set /A "index=!random! %% 36"
     for %%C in (!index!) do (

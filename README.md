@@ -3,9 +3,9 @@ Here's a simple README file for `random_hostname.bat` script:
 ```markdown
 # Set Hostname Script
 
-This script generates a random hostname in the format `LAPTOP/DESKTOP-XXXXXXX` and sets it as the new hostname for the system.
+This script generates a random hostname in the format `PREFIX-XXXXXXX` and sets it as the new hostname for the system.
 
-The hostname is composed of a fixed prefix `LAPTOP/DESKTOP-` followed by seven random characters (uppercase letters and digits).
+The hostname is composed of a prefix (default is `DESKTOP-`) followed by seven random characters (uppercase letters and digits).
 
 ## Usage
 
@@ -13,15 +13,17 @@ The hostname is composed of a fixed prefix `LAPTOP/DESKTOP-` followed by seven r
 2. Open a PowerShell or Terminal with administrative privileges.
 3. Navigate to the directory where `random_hostname.bat` is located.
 4. Execute the script by typing:
-  .\generate_hostname.bat
+  .\random_hostname.bat [PREFIX]
+   - Example for Desktop: `.\random_hostname.bat DESKTOP` (or just `.\random_hostname.bat`)
+   - Example for Laptop: `.\random_hostname.bat LAPTOP`
 5. The script will generate a new random hostname and set it for the system. It will also display the new hostname in the command prompt.
 
 ## Script Details
 
 The script consists of the following parts:
 
-- Generates a random hostname in the format `LAPTOP/DESKTOP-XXXXXXX`.
-- Uses the `wmic` command to set the new hostname.
+- Generates a random hostname in the format `PREFIX-XXXXXXX`.
+- Uses the PowerShell `Rename-Computer` command to set the new hostname.
 - The charset used for random generation includes uppercase letters (A-Z) and digits (0-9).
 
 ## Note
@@ -31,8 +33,8 @@ The script consists of the following parts:
 
 ## Example Output
 
-LAPTOP-A1B2C3D
-Hostname changed to: LAPTOP-A1B2C3D
+DESKTOP-A1B2C3D
+Hostname changed to: DESKTOP-A1B2C3D
 
 ## References
 
@@ -64,7 +66,7 @@ This repository contains a batch script that changes the hostname of your comput
 The script performs the following actions:
 
 1. Checks for elevated permissions (administrative privileges).
-2. Retrieves the system's serial number using `wmic bios get serialnumber`.
+2. Retrieves the system's serial number using PowerShell.
 3. Sets the hostname to the retrieved serial number.
 4. Asks the user whether they want to restart the computer immediately or later.
 
