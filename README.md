@@ -1,25 +1,31 @@
-# Windows Hostname Utilities
+# Sync-SerialNumberHostname
 
-A collection of batch scripts to automate hostname changes on Windows systems.
+Utilitário de função única para Windows que sincroniza automaticamente o Hostname (Nome do Computador) com o **Serial Number** (Service Tag) recuperado diretamente da BIOS do hardware.
 
-## 🛠️ Included Scripts
+## 🚀 Funcionalidades
+- **PowerShell Nativo:** Utiliza `CIM` (Common Information Model) para máxima performance.
+- **Validação Inteligente:** Detecta e aborta a execução se o Serial Number for genérico (comum em VMs ou placas-mãe sem gravação de série, ex: "Default string").
+- **Segurança:** Requer privilégios administrativos e valida o estado atual antes de tentar renomear.
 
-- **`random_hostname-DESKTOP.bat`**: Generates a random hostname with the `DESKTOP-` prefix and applies it.
-- **`random_hostname-LAPTOP.bat`**: Generates a random hostname with the `LAPTOP-` prefix and applies it.
-- **`serial_hostname.bat`**: Retrieves the hardware serial number and sets it as the system's hostname.
+## 🛠️ Como Usar
 
-## 🚀 How to Use
+### Opção 1: Execução Local
+1. Abra o PowerShell como **Administrador**.
+2. Execute o script:
+   ```powershell
+   Set-ExecutionPolicy Bypass -Scope Process -Force; .\Sync-SerialNumberHostname.ps1
+   ```
 
-1. Download the desired script.
-2. Right-click the file and select **"Run as Administrator"**.
-3. Follow the on-screen prompts.
-4. Restart your computer to apply the changes.
+### Opção 2: Linha Única (Oneliner) para Automação
+Ideal para scripts de implantação (Deployment) ou RMM:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File "Sync-SerialNumberHostname.ps1"
+```
 
-## 📋 Requirements
+## 📋 Requisitos
+- Windows 10 ou 11.
+- PowerShell 5.1 ou PowerShell Core.
+- Privilégios de Administrador.
 
-- Windows 10 or 11.
-- Administrative privileges.
-
-## 📝 License
-
-This project is open-source and available for any use.
+## 📝 Licença
+Este projeto é de domínio público.
