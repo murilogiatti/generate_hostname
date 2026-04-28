@@ -37,6 +37,17 @@ Function Set-HostnameFromSerial {
                 return
             }
 
+            # 3.1. Validação de formato e comprimento do Hostname (RFC 1123 + NetBIOS limit)
+            if ($serial.Length -gt 15) {
+                Write-Error "Serial Number muito longo ($($serial.Length) caracteres). O hostname do Windows deve ter no máximo 15 caracteres."
+                return
+            }
+
+            if ($serial -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9-]{0,13}[a-zA-Z0-9])?$') {
+                Write-Error "Serial Number contém caracteres inválidos ou formato inválido para hostname ('$serial')."
+                return
+            }
+
             $currentHostname = $env:COMPUTERNAME
             if ($currentHostname -eq $serial) {
                 Write-Host "✅ O hostname já está sincronizado com o Serial Number ($serial)." -ForegroundColor Green
