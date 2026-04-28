@@ -31,8 +31,14 @@ Function Set-HostnameFromSerial {
             $serial = $bios.SerialNumber.Trim()
 
             # 3. Validação de Serial Number inválido/genérico
-            $invalidSerials = @("", "Default string", "0123456789", "To be filled by O.E.M.")
-            if ($null -eq $serial -or $serial -in $invalidSerials) {
+            # Optimization: Using a Hashtable for O(1) lookup performance instead of an array.
+            $invalidSerials = @{
+                ""                       = $true
+                "Default string"         = $true
+                "0123456789"             = $true
+                "To be filled by O.E.M." = $true
+            }
+            if ($null -eq $serial -or $invalidSerials.ContainsKey($serial)) {
                 Write-Error "Serial Number inválido ou genérico detectado ('$serial'). O hostname não será alterado."
                 return
             }
