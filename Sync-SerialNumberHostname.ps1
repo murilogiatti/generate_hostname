@@ -28,7 +28,10 @@ Function Set-HostnameFromSerial {
         try {
             # 2. Captura o Serial Number (Win32_BIOS)
             $bios = Get-CimInstance -ClassName Win32_BIOS -ErrorAction Stop
-            $serial = $bios.SerialNumber.Trim()
+            $serial = $bios.SerialNumber
+            if ($null -ne $serial) {
+                $serial = $serial.Trim()
+            }
 
             # 3. Validação de Serial Number inválido/genérico
             $invalidSerials = @("", "Default string", "0123456789", "To be filled by O.E.M.")
@@ -84,4 +87,6 @@ Function Set-HostnameFromSerial {
     }
 }
 
-Set-HostnameFromSerial
+if ($MyInvocation.InvocationName -ne '.') {
+    Set-HostnameFromSerial
+}
