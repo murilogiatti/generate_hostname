@@ -52,7 +52,7 @@ Function Set-HostnameFromSerial {
                 return
             }
 
-            if ($serial -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9-]{0,13}[a-zA-Z0-9])?$') {
+            if ($serial -notmatch '\A[a-zA-Z0-9]([a-zA-Z0-9-]{0,13}[a-zA-Z0-9])?\z') {
                 Write-Error "Serial Number contém caracteres inválidos ou formato inválido para hostname ('$serial')."
                 return
             }
