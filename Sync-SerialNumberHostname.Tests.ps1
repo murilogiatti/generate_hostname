@@ -16,7 +16,7 @@ Describe "Set-HostnameFromSerial" {
 
             Set-HostnameFromSerial
 
-            Should -Invoke Write-Error -Times 1 -ParameterFilter { $args[0] -like "*deve ser executado como Administrador*" }
+            Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "*deve ser executado como Administrador*" }
         }
     }
 
@@ -51,7 +51,7 @@ Describe "Set-HostnameFromSerial" {
 
                 Set-HostnameFromSerial
 
-                Should -Invoke Write-Error -Times 1 -ParameterFilter { $args[0] -like $case.Error }
+                Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like $case.Error }
                 Should -Invoke Rename-Computer -Times 0
             }
         }
@@ -107,6 +107,41 @@ Describe "Set-HostnameFromSerial" {
                 Set-HostnameFromSerial
 
                 Should -Invoke Rename-Computer -Times 1 -ParameterFilter { $NewName -eq $serial -and $Force -eq $true }
+            }
+            finally {
+                $env:COMPUTERNAME = $oldEnv
+            }
+        }
+    }
+
+    Context "Error Handling" {
+        BeforeEach {
+            # Mock Admin check
+            $mockPrincipal = [PSCustomObject]@{ IsInRole = { return $true } }
+            Mock New-Object { return $mockPrincipal }
+            Mock Write-Host { }
+            Mock Write-Error { }
+        }
+
+        It "Should catch and report exceptions from Get-CimInstance" {
+            Mock Get-CimInstance { throw "CIM Failure" }
+
+            Set-HostnameFromSerial
+
+            Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "*Falha crítica ao tentar alterar o hostname: CIM Failure*" }
+        }
+
+        It "Should catch and report exceptions from Rename-Computer" {
+            $serial = "NEW-SERIAL-99"
+            Mock Get-CimInstance { return [PSCustomObject]@{ SerialNumber = $serial } }
+            Mock Rename-Computer { throw "Rename Failure" }
+
+            $oldEnv = $env:COMPUTERNAME
+            $env:COMPUTERNAME = "DIFFERENT-NAME"
+
+            try {
+                Set-HostnameFromSerial
+                Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "*Falha crítica ao tentar alterar o hostname: Rename Failure*" }
             }
             finally {
                 $env:COMPUTERNAME = $oldEnv
