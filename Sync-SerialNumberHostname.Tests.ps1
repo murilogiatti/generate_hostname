@@ -71,6 +71,42 @@ Describe "Set-HostnameFromSerial" {
         }
     }
 
+    Context "Error Handling" {
+        BeforeEach {
+            # Mock Admin check
+            $mockPrincipal = [PSCustomObject]@{ IsInRole = { return $true } }
+            Mock New-Object { return $mockPrincipal }
+            Mock Write-Host { }
+            Mock Write-Error { }
+        }
+
+        It "Should catch and report exceptions from Get-CimInstance" {
+            Mock Get-CimInstance { throw "CIM Error" }
+
+            Set-HostnameFromSerial
+
+            Should -Invoke Write-Error -Times 1 -ParameterFilter { $args[0] -like "*Falha crítica*" -and $args[0] -like "*CIM Error*" }
+        }
+
+        It "Should catch and report exceptions from Rename-Computer" {
+            $serial = "VALID-SERIAL"
+            Mock Get-CimInstance { return [PSCustomObject]@{ SerialNumber = $serial } }
+            Mock Rename-Computer { throw "Rename Error" }
+
+            # Mock environment variable to ensure we don't return early due to same hostname
+            $oldEnv = $env:COMPUTERNAME
+            $env:COMPUTERNAME = "OLD-NAME"
+
+            try {
+                Set-HostnameFromSerial
+                Should -Invoke Write-Error -Times 1 -ParameterFilter { $args[0] -like "*Falha crítica*" -and $args[0] -like "*Rename Error*" }
+            }
+            finally {
+                $env:COMPUTERNAME = $oldEnv
+            }
+        }
+    }
+
     Context "Successful Rename" {
         It "Should call Rename-Computer and Prompt for restart when serial is valid" {
             $serial = "VALID-SERIAL-123"
