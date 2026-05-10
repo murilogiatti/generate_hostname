@@ -8,12 +8,19 @@
 
 .NOTES
     Autor: Orion (Gemini CLI)
-    Versão: 1.0
+    Versão: 1.1
 #>
+
+[CmdletBinding()]
+Param(
+    [switch]$Restart
+)
 
 Function Set-HostnameFromSerial {
     [CmdletBinding()]
-    Param()
+    Param(
+        [switch]$Restart
+    )
 
     Process {
         # 1. Verificação de privilégios administrativos
@@ -57,18 +64,8 @@ Function Set-HostnameFromSerial {
                 return
             }
 
-            # 3.1. Validação de formato e comprimento do Hostname (RFC 1123 + NetBIOS limit)
-            if ($serial.Length -gt 15) {
-                Write-Error "Serial Number muito longo ($($serial.Length) caracteres). O hostname do Windows deve ter no máximo 15 caracteres."
-                return
-            }
-
-            if ($serial -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9-]{0,13}[a-zA-Z0-9])?$') {
-                Write-Error "Serial Number contém caracteres inválidos ou formato inválido para hostname ('$serial')."
-                return
-            }
-
-            $currentHostname = $env:COMPUTERNAME
+            # Securely retrieve current hostname to avoid environment variable spoofing
+            $currentHostname = (Get-CimInstance -ClassName Win32_ComputerSystem).Name
             if ($currentHostname -eq $serial) {
                 Write-Host "✅ O hostname já está sincronizado com o Serial Number ($serial)." -ForegroundColor Green
                 return
@@ -80,22 +77,13 @@ Function Set-HostnameFromSerial {
 
             Write-Host "✨ Nome alterado com sucesso para: $serial" -ForegroundColor Green
 
-            # 5. Solicitação de Reinicialização
-            Write-Host ""
-            $caption = "Reinicialização Necessária"
-            $message = "O computador precisa ser reiniciado para aplicar o novo hostname ($serial). Deseja reiniciar agora?"
-            $choices = [System.Management.Automation.Host.ChoiceDescription[]] @(
-                New-Object System.Management.Automation.Host.ChoiceDescription "&Sim", "Reinicia o computador imediatamente."
-                New-Object System.Management.Automation.Host.ChoiceDescription "&Não", "O usuário reiniciará manualmente mais tarde."
-            )
-
-            $result = $Host.UI.PromptForChoice($caption, $message, $choices, 0)
-
-            if ($result -eq 0) {
-                Write-Host "🔄 Reiniciando..." -ForegroundColor Cyan
+            # 5. Reinicialização (se solicitado)
+            if ($Restart) {
+                Write-Host "🔄 Reiniciando o computador imediatamente para aplicar as alterações..." -ForegroundColor Cyan
                 Restart-Computer -Force
             } else {
-                Write-Host "⚠️ Lembre-se de reiniciar manualmente para aplicar as alterações." -ForegroundColor Magenta
+                Write-Host "⚠️ O computador precisa ser reiniciado para aplicar o novo hostname ($serial)." -ForegroundColor Yellow
+                Write-Host "⚠️ Por favor, reinicie manualmente o mais breve possível." -ForegroundColor Magenta
             }
 
         } catch {
@@ -105,5 +93,5 @@ Function Set-HostnameFromSerial {
 }
 
 if ($MyInvocation.InvocationName -ne '.') {
-    Set-HostnameFromSerial
+    Set-HostnameFromSerial -Restart:$Restart
 }
