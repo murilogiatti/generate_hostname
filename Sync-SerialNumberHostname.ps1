@@ -57,7 +57,7 @@ Function Set-HostnameFromSerial {
                 return
             }
 
-            $currentHostname = $env:COMPUTERNAME
+            $currentHostname = (Get-CimInstance -ClassName Win32_ComputerSystem).Name
             if ($currentHostname -eq $serial) {
                 Write-Host "✅ O hostname já está sincronizado com o Serial Number ($serial)." -ForegroundColor Green
                 return

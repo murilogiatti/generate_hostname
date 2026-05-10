@@ -58,19 +58,13 @@ Describe "Set-HostnameFromSerial" {
 
         It "Should not change hostname if it is already correct" {
             $serial = "XYZ123"
-            Mock Get-CimInstance { return [PSCustomObject]@{ SerialNumber = $serial } }
-
-            # Mock environment variable
-            $oldEnv = $env:COMPUTERNAME
-            $env:COMPUTERNAME = $serial
-
-            try {
-                Set-HostnameFromSerial
-                Should -Invoke Rename-Computer -Times 0
+            Mock Get-CimInstance {
+                if ($ClassName -eq 'Win32_BIOS') { return [PSCustomObject]@{ SerialNumber = $serial } }
+                if ($ClassName -eq 'Win32_ComputerSystem') { return [PSCustomObject]@{ Name = $serial } }
             }
-            finally {
-                $env:COMPUTERNAME = $oldEnv
-            }
+
+            Set-HostnameFromSerial
+            Should -Invoke Rename-Computer -Times 0
         }
     }
 
@@ -83,7 +77,10 @@ Describe "Set-HostnameFromSerial" {
             $mockPrincipal = [PSCustomObject]@{ IsInRole = { return $true } }
             Mock New-Object { return $mockPrincipal }
 
-            Mock Get-CimInstance { return [PSCustomObject]@{ SerialNumber = $serial } }
+            Mock Get-CimInstance {
+                if ($ClassName -eq 'Win32_BIOS') { return [PSCustomObject]@{ SerialNumber = $serial } }
+                if ($ClassName -eq 'Win32_ComputerSystem') { return [PSCustomObject]@{ Name = $currentName } }
+            }
             Mock Write-Host { }
             Mock Rename-Computer { }
             Mock Restart-Computer { }
@@ -100,17 +97,9 @@ Describe "Set-HostnameFromSerial" {
             # Actually, the script uses $Host.UI.PromptForChoice
             # We might need to mock the command or provide a mock host
 
-            $oldEnv = $env:COMPUTERNAME
-            $env:COMPUTERNAME = $currentName
+            Set-HostnameFromSerial
 
-            try {
-                Set-HostnameFromSerial
-
-                Should -Invoke Rename-Computer -Times 1 -ParameterFilter { $NewName -eq $serial -and $Force -eq $true }
-            }
-            finally {
-                $env:COMPUTERNAME = $oldEnv
-            }
+            Should -Invoke Rename-Computer -Times 1 -ParameterFilter { $NewName -eq $serial -and $Force -eq $true }
         }
     }
 }
