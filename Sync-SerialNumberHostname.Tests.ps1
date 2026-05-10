@@ -85,18 +85,6 @@ Describe "Set-HostnameFromSerial" {
             Mock Rename-Computer { }
             Mock Restart-Computer { }
 
-            # Mock the Host UI for Choice Prompt
-            $mockHost = [PSCustomObject]@{
-                UI = [PSCustomObject]@{
-                    PromptForChoice = { return 1 } # Return 1 for "No"
-                }
-            }
-            # Unfortunately mocking $Host is hard, but let's try to mock the call if possible
-            # In Pester, we can sometimes mock the UI calls if they are called on $Host.UI
-
-            # Actually, the script uses $Host.UI.PromptForChoice
-            # We might need to mock the command or provide a mock host
-
             $oldEnv = $env:COMPUTERNAME
             $env:COMPUTERNAME = $currentName
 
