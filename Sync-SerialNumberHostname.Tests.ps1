@@ -33,11 +33,14 @@ Describe "Set-HostnameFromSerial" {
         }
 
         $invalidSerials = @(
-            @{ Name = "Empty String"; Serial = "" },
-            @{ Name = "Default String"; Serial = "Default string" },
-            @{ Name = "Numeric Dummy"; Serial = "0123456789" },
-            @{ Name = "OEM String"; Serial = "To be filled by O.E.M." },
-            @{ Name = "Null Serial"; Serial = $null }
+            @{ Name = "Empty String"; Serial = ""; Error = "*inválido ou genérico*" },
+            @{ Name = "Default String"; Serial = "Default string"; Error = "*inválido ou genérico*" },
+            @{ Name = "Numeric Dummy"; Serial = "0123456789"; Error = "*inválido ou genérico*" },
+            @{ Name = "OEM String"; Serial = "To be filled by O.E.M."; Error = "*inválido ou genérico*" },
+            @{ Name = "Null Serial"; Serial = $null; Error = "*inválido ou genérico*" },
+            @{ Name = "Invalid Format"; Serial = "Host_Name"; Error = "*contém caracteres inválidos*" },
+            @{ Name = "Too Long"; Serial = "A1234567890123456"; Error = "*muito longo*" },
+            @{ Name = "Serial with Newline"; Serial = "ABC12345678901`n"; Error = "*contém caracteres inválidos*" }
         )
 
         foreach ($case in $invalidSerials) {
@@ -48,7 +51,7 @@ Describe "Set-HostnameFromSerial" {
 
                 Set-HostnameFromSerial
 
-                Should -Invoke Write-Error -Times 1 -ParameterFilter { $args[0] -like "*Serial Number inválido ou genérico*" }
+                Should -Invoke Write-Error -Times 1 -ParameterFilter { $args[0] -like $case.Error }
                 Should -Invoke Rename-Computer -Times 0
             }
         }
