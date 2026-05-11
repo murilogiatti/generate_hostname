@@ -1,7 +1,6 @@
 Describe "Set-HostnameFromSerial" {
     BeforeAll {
         # Import the script to access the function
-        # The script has been modified to not execute when dot-sourced
         . "$PSScriptRoot/Sync-SerialNumberHostname.ps1"
     }
 
@@ -30,6 +29,12 @@ Describe "Set-HostnameFromSerial" {
             Mock Write-Host { }
             Mock Write-Error { }
             Mock Rename-Computer { }
+            # Mock current hostname to be different from any valid test serial
+            Mock Get-CimInstance {
+                if ($ClassName -eq 'Win32_ComputerSystem') {
+                    return [PSCustomObject]@{ Name = "OLD-NAME" }
+                }
+            }
         }
 
         $invalidSerials = @(
@@ -46,7 +51,12 @@ Describe "Set-HostnameFromSerial" {
         foreach ($case in $invalidSerials) {
             It "Should abort and show error for invalid serial: $($case.Name)" {
                 Mock Get-CimInstance {
-                    return [PSCustomObject]@{ SerialNumber = $case.Serial }
+                    if ($ClassName -eq 'Win32_BIOS') {
+                        return [PSCustomObject]@{ SerialNumber = $case.Serial }
+                    }
+                    if ($ClassName -eq 'Win32_ComputerSystem') {
+                        return [PSCustomObject]@{ Name = "OLD-NAME" }
+                    }
                 }
 
                 Set-HostnameFromSerial
@@ -58,19 +68,17 @@ Describe "Set-HostnameFromSerial" {
 
         It "Should not change hostname if it is already correct" {
             $serial = "XYZ123"
-            Mock Get-CimInstance { return [PSCustomObject]@{ SerialNumber = $serial } }
-
-            # Mock environment variable
-            $oldEnv = $env:COMPUTERNAME
-            $env:COMPUTERNAME = $serial
-
-            try {
-                Set-HostnameFromSerial
-                Should -Invoke Rename-Computer -Times 0
+            Mock Get-CimInstance {
+                if ($ClassName -eq 'Win32_BIOS') {
+                    return [PSCustomObject]@{ SerialNumber = $serial }
+                }
+                if ($ClassName -eq 'Win32_ComputerSystem') {
+                    return [PSCustomObject]@{ Name = $serial }
+                }
             }
-            finally {
-                $env:COMPUTERNAME = $oldEnv
-            }
+
+            Set-HostnameFromSerial
+            Should -Invoke Rename-Computer -Times 0
         }
     }
 
@@ -87,56 +95,56 @@ Describe "Set-HostnameFromSerial" {
 
             Set-HostnameFromSerial
 
-            Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "Falha crítica ao tentar alterar o hostname: CIM Failure*" }
+            Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "*Falha crítica ao tentar alterar o hostname: CIM Failure*" }
         }
 
         It "Should catch and report exceptions from Rename-Computer" {
             $serial = "VALID-SERIAL"
-            Mock Get-CimInstance { return [PSCustomObject]@{ SerialNumber = $serial } }
-            
-            # Need to set env var so it doesn't return early due to match
-            $oldEnv = $env:COMPUTERNAME
-            $env:COMPUTERNAME = "DIFFERENT-NAME"
+            Mock Get-CimInstance {
+                if ($ClassName -eq 'Win32_BIOS') { return [PSCustomObject]@{ SerialNumber = $serial } }
+                if ($ClassName -eq 'Win32_ComputerSystem') { return [PSCustomObject]@{ Name = "DIFFERENT-NAME" } }
+            }
             
             Mock Rename-Computer { throw "Rename Failure" }
 
-            try {
-                Set-HostnameFromSerial
-                Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "Falha crítica ao tentar alterar o hostname: Rename Failure*" }
-            }
-            finally {
-                $env:COMPUTERNAME = $oldEnv
-            }
+            Set-HostnameFromSerial
+            Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "*Falha crítica ao tentar alterar o hostname: Rename Failure*" }
         }
     }
 
-
-    Context "Successful Rename" {
-        It "Should call Rename-Computer and Prompt for restart when serial is valid" {
-            $serial = "VALID-SERIAL-123"
-            $currentName = "OLD-NAME"
-
-            # Mock Admin check
+    Context "Successful Rename and Restart logic" {
+        BeforeEach {
             $mockPrincipal = [PSCustomObject]@{ IsInRole = { return $true } }
             Mock New-Object { return $mockPrincipal }
-
-            Mock Get-CimInstance { return [PSCustomObject]@{ SerialNumber = $serial } }
             Mock Write-Host { }
             Mock Rename-Computer { }
             Mock Restart-Computer { }
+        }
 
-            $oldEnv = $env:COMPUTERNAME
-            $env:COMPUTERNAME = $currentName
-
-            try {
-                Set-HostnameFromSerial
-
-                Should -Invoke Rename-Computer -Times 1 -ParameterFilter { $NewName -eq $serial -and $Force -eq $true }
+        It "Should call Rename-Computer and NOT restart by default" {
+            $serial = "VALID-SERIAL-1"
+            Mock Get-CimInstance {
+                if ($ClassName -eq 'Win32_BIOS') { return [PSCustomObject]@{ SerialNumber = $serial } }
+                if ($ClassName -eq 'Win32_ComputerSystem') { return [PSCustomObject]@{ Name = "OLD-NAME" } }
             }
-            finally {
-                $env:COMPUTERNAME = $oldEnv
+
+            Set-HostnameFromSerial
+
+            Should -Invoke Rename-Computer -Times 1 -ParameterFilter { $NewName -eq $serial -and $Force -eq $true }
+            Should -Invoke Restart-Computer -Times 0
+        }
+
+        It "Should call Rename-Computer and Restart when -Restart switch is used" {
+            $serial = "VALID-SERIAL-2"
+            Mock Get-CimInstance {
+                if ($ClassName -eq 'Win32_BIOS') { return [PSCustomObject]@{ SerialNumber = $serial } }
+                if ($ClassName -eq 'Win32_ComputerSystem') { return [PSCustomObject]@{ Name = "OLD-NAME" } }
             }
+
+            Set-HostnameFromSerial -Restart
+
+            Should -Invoke Rename-Computer -Times 1 -ParameterFilter { $NewName -eq $serial -and $Force -eq $true }
+            Should -Invoke Restart-Computer -Times 1 -ParameterFilter { $Force -eq $true }
         }
     }
-
 }
