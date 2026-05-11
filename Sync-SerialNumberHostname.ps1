@@ -34,7 +34,7 @@ Function Set-HostnameFromSerial {
         
         try {
             # 2. Captura o Serial Number (Win32_BIOS)
-            $bios = Get-CimInstance -ClassName Win32_BIOS -ErrorAction Stop
+            $bios = Get-CimInstance -ClassName Win32_BIOS -Property SerialNumber -ErrorAction Stop
             $serial = $bios.SerialNumber
             if ($null -ne $serial) {
                 $serial = $serial.Trim()
