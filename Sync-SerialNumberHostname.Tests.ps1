@@ -4,14 +4,40 @@ Describe "Set-HostnameFromSerial" {
         . "$PSScriptRoot/Sync-SerialNumberHostname.ps1"
     }
 
+    BeforeEach {
+        $script:mockSettings = @{
+            IsAdmin         = $true
+            SerialNumber    = "VALID-SERIAL"
+            CurrentHostname = "OLD-NAME"
+            CimException    = $null
+            RenameException = $null
+        }
+
+        Mock New-Object {
+            return [PSCustomObject]@{
+                IsInRole = { param($role) return $script:mockSettings.IsAdmin }
+            }
+        }
+        Mock Get-CimInstance {
+            if ($script:mockSettings.CimException) { throw $script:mockSettings.CimException }
+            if ($ClassName -eq 'Win32_BIOS') {
+                return [PSCustomObject]@{ SerialNumber = $script:mockSettings.SerialNumber }
+            }
+            if ($ClassName -eq 'Win32_ComputerSystem') {
+                return [PSCustomObject]@{ Name = $script:mockSettings.CurrentHostname }
+            }
+        }
+        Mock Write-Host { }
+        Mock Write-Error { }
+        Mock Rename-Computer {
+            if ($script:mockSettings.RenameException) { throw $script:mockSettings.RenameException }
+        }
+        Mock Restart-Computer { }
+    }
+
     Context "Administrative Privileges" {
         It "Should fail when not running as Administrator" {
-            # Mock the admin check to return false
-            $mockPrincipal = [PSCustomObject]@{
-                IsInRole = { return $false }
-            }
-            Mock New-Object { return $mockPrincipal }
-            Mock Write-Error { }
+            $script:mockSettings.IsAdmin = $false
 
             Set-HostnameFromSerial
 
@@ -20,23 +46,6 @@ Describe "Set-HostnameFromSerial" {
     }
 
     Context "Serial Number Validation" {
-        BeforeEach {
-            # Mock admin check to true for these tests
-            $mockPrincipal = [PSCustomObject]@{
-                IsInRole = { return $true }
-            }
-            Mock New-Object { return $mockPrincipal }
-            Mock Write-Host { }
-            Mock Write-Error { }
-            Mock Rename-Computer { }
-            # Mock current hostname to be different from any valid test serial
-            Mock Get-CimInstance {
-                if ($ClassName -eq 'Win32_ComputerSystem') {
-                    return [PSCustomObject]@{ Name = "OLD-NAME" }
-                }
-            }
-        }
-
         $invalidSerials = @(
             @{ Name = "Empty String"; Serial = ""; Error = "*inválido ou genérico*" },
             @{ Name = "Default String"; Serial = "Default string"; Error = "*inválido ou genérico*" },
@@ -50,14 +59,7 @@ Describe "Set-HostnameFromSerial" {
 
         foreach ($case in $invalidSerials) {
             It "Should abort and show error for invalid serial: $($case.Name)" {
-                Mock Get-CimInstance {
-                    if ($ClassName -eq 'Win32_BIOS') {
-                        return [PSCustomObject]@{ SerialNumber = $case.Serial }
-                    }
-                    if ($ClassName -eq 'Win32_ComputerSystem') {
-                        return [PSCustomObject]@{ Name = "OLD-NAME" }
-                    }
-                }
+                $script:mockSettings.SerialNumber = $case.Serial
 
                 Set-HostnameFromSerial
 
@@ -68,14 +70,8 @@ Describe "Set-HostnameFromSerial" {
 
         It "Should not change hostname if it is already correct" {
             $serial = "XYZ123"
-            Mock Get-CimInstance {
-                if ($ClassName -eq 'Win32_BIOS') {
-                    return [PSCustomObject]@{ SerialNumber = $serial }
-                }
-                if ($ClassName -eq 'Win32_ComputerSystem') {
-                    return [PSCustomObject]@{ Name = $serial }
-                }
-            }
+            $script:mockSettings.SerialNumber = $serial
+            $script:mockSettings.CurrentHostname = $serial
 
             Set-HostnameFromSerial
             Should -Invoke Rename-Computer -Times 0
@@ -83,15 +79,8 @@ Describe "Set-HostnameFromSerial" {
     }
 
     Context "Error Handling" {
-        BeforeEach {
-            $mockPrincipal = [PSCustomObject]@{ IsInRole = { return $true } }
-            Mock New-Object { return $mockPrincipal }
-            Mock Write-Host { }
-            Mock Write-Error { }
-        }
-
         It "Should catch and report exceptions from Get-CimInstance" {
-            Mock Get-CimInstance { throw "CIM Failure" }
+            $script:mockSettings.CimException = "CIM Failure"
 
             Set-HostnameFromSerial
 
@@ -99,13 +88,9 @@ Describe "Set-HostnameFromSerial" {
         }
 
         It "Should catch and report exceptions from Rename-Computer" {
-            $serial = "VALID-SERIAL"
-            Mock Get-CimInstance {
-                if ($ClassName -eq 'Win32_BIOS') { return [PSCustomObject]@{ SerialNumber = $serial } }
-                if ($ClassName -eq 'Win32_ComputerSystem') { return [PSCustomObject]@{ Name = "DIFFERENT-NAME" } }
-            }
-            
-            Mock Rename-Computer { throw "Rename Failure" }
+            $script:mockSettings.SerialNumber = "VALID-SERIAL"
+            $script:mockSettings.CurrentHostname = "DIFFERENT-NAME"
+            $script:mockSettings.RenameException = "Rename Failure"
 
             Set-HostnameFromSerial
             Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "*Falha crítica ao tentar alterar o hostname: Rename Failure*" }
@@ -113,20 +98,10 @@ Describe "Set-HostnameFromSerial" {
     }
 
     Context "Successful Rename and Restart logic" {
-        BeforeEach {
-            $mockPrincipal = [PSCustomObject]@{ IsInRole = { return $true } }
-            Mock New-Object { return $mockPrincipal }
-            Mock Write-Host { }
-            Mock Rename-Computer { }
-            Mock Restart-Computer { }
-        }
-
         It "Should call Rename-Computer and NOT restart by default" {
             $serial = "VALID-SERIAL-1"
-            Mock Get-CimInstance {
-                if ($ClassName -eq 'Win32_BIOS') { return [PSCustomObject]@{ SerialNumber = $serial } }
-                if ($ClassName -eq 'Win32_ComputerSystem') { return [PSCustomObject]@{ Name = "OLD-NAME" } }
-            }
+            $script:mockSettings.SerialNumber = $serial
+            $script:mockSettings.CurrentHostname = "OLD-NAME"
 
             Set-HostnameFromSerial
 
@@ -136,10 +111,8 @@ Describe "Set-HostnameFromSerial" {
 
         It "Should call Rename-Computer and Restart when -Restart switch is used" {
             $serial = "VALID-SERIAL-2"
-            Mock Get-CimInstance {
-                if ($ClassName -eq 'Win32_BIOS') { return [PSCustomObject]@{ SerialNumber = $serial } }
-                if ($ClassName -eq 'Win32_ComputerSystem') { return [PSCustomObject]@{ Name = "OLD-NAME" } }
-            }
+            $script:mockSettings.SerialNumber = $serial
+            $script:mockSettings.CurrentHostname = "OLD-NAME"
 
             Set-HostnameFromSerial -Restart
 
