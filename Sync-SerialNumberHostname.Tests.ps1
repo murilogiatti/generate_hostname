@@ -110,6 +110,20 @@ Describe "Set-HostnameFromSerial" {
             Set-HostnameFromSerial
             Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "*Falha crítica ao tentar alterar o hostname: Rename Failure*" }
         }
+
+        It "Should catch and report exceptions from Restart-Computer" {
+            $serial = "VALID-SERIAL"
+            Mock Get-CimInstance {
+                if ($ClassName -eq 'Win32_BIOS') { return [PSCustomObject]@{ SerialNumber = $serial } }
+                if ($ClassName -eq 'Win32_ComputerSystem') { return [PSCustomObject]@{ Name = "DIFFERENT-NAME" } }
+            }
+            Mock Rename-Computer { }
+            Mock Restart-Computer { throw "Restart Failure" }
+
+            Set-HostnameFromSerial -Restart
+
+            Should -Invoke Write-Error -Times 1 -ParameterFilter { $Message -like "*Falha crítica ao tentar alterar o hostname: Restart Failure*" }
+        }
     }
 
     Context "Successful Rename and Restart logic" {
