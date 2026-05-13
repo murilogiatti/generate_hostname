@@ -7,7 +7,9 @@ if %errorLevel% == 0 (
     echo Elevado: Iniciando script...
 ) else (
     echo Permissões de administrador necessárias. Solicitando elevação...
-    powershell.exe -Command "Start-Process '%~f0' -ArgumentList '%*' -Verb runAs"
+    set "SCRIPT_PATH=%~f0"
+    set "SCRIPT_ARGS=%*"
+    powershell.exe -NoProfile -Command "Start-Process -FilePath $env:SCRIPT_PATH -ArgumentList $env:SCRIPT_ARGS -Verb RunAs"
     exit /b
 )
 
