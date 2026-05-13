@@ -76,6 +76,15 @@ Describe "Set-HostnameFromSerial" {
             Set-HostnameFromSerial
             Should -Invoke Rename-Computer -Times 0
         }
+
+        It "Should trim leading and trailing whitespace from the serial number" {
+            $script:mockSettings.SerialNumber = "  TRIM-ME  "
+            $script:mockSettings.CurrentHostname = "OLD-NAME"
+
+            Set-HostnameFromSerial
+
+            Should -Invoke Rename-Computer -Times 1 -ParameterFilter { $NewName -eq "TRIM-ME" -and $Force -eq $true }
+        }
     }
 
     Context "Error Handling" {
